@@ -16,7 +16,7 @@ MODE_ACTIVE = 0
 MODE_QUERY = 1
 PERIOD_CONTINUOUS = 0
 
-JSON_FILE = '/home/pi/Desktop/data/sensordata.json'
+JSON_FILE = '/home/pi/Desktop/data/sensordata.json' #set to
 
 
 
@@ -108,13 +108,23 @@ if __name__ == "__main__":
     cmd_firmware_ver()
     cmd_set_working_period(PERIOD_CONTINUOUS)
     cmd_set_mode(MODE_QUERY);
+    fire = 0;
+    firetotal = 0;
     while True:
         cmd_set_sleep(0)
         for t in range(15):
             values = cmd_query_data();
+
             if values is not None and len(values) == 2:
-              print("PM2.5: ", values[0], ", PM10: ", values[1])
+              print("PM2.5: ", values[0], ", PM10: ", values[1], "  High PM Values:", fire)
+              if values[0] > .2:
+                  print("Warning - High PM2.5 values detected!")
+                  fire = fire + 1
+              if values[1] > .5:
+                  print("Warning - High PM10 values detected!")
+                  fire = fire + 1
               time.sleep(2)
+              
 
         # open stored data
         try:
@@ -128,14 +138,23 @@ if __name__ == "__main__":
             data.pop(0)
 
         # append new values
-        jsonrow = {'pm25': values[0], 'pm10': values[1], 'time': time.strftime("%d.%m.%Y %H:%M:%S")}
+        jsonrow = {'pm25': values[0], 'pm10': values[1], 'time': time.strftime("%d.%m.%Y %H:%M:%S"), '  High PM Values:': fire, 'High PM Values throughout Runtime:': firetotal}
         data.append(jsonrow)
 
         # save it
         with open(JSON_FILE, 'w') as outfile:
             json.dump(data, outfile)
+   
+        if fire >= 6:
+            print("Warning fire detected based of smoke sensor reading")
+            print("%d instances of high smoke content was detected" % (fire))
+        firetotal = firetotal + fire;
+        print("Total instances of high smoke content through run-time = %d" % (firetotal))
+            
+
 
             
         print("Going to sleep for 1 min...")
         cmd_set_sleep(1)
         time.sleep(60)
+        fire = 0
